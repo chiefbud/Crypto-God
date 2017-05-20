@@ -10,6 +10,8 @@ var server_url = process.env.SLACK_BOT_TOKEN || 'http://luminoco.slack.com',
     bot_name,
     bot_id;
 
+var cryptocurrencyChannel;
+
 //make a new bot
 var bot = new RtmClient(bot_token);
 //initialize the bot's connection
@@ -38,26 +40,30 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
   var interestList = require('./interestlist'),
       tickerData = [];
 
-  function update(updateList) {
+  function update(updateList, channel) {
     if (tickerData.length !== 0 && updateList.length !== 0) {
-      for (coin in list) {
-        theCoin = list[coin];
-        console.log('Sending an update for %s...', theCoin);
-        selectCoinInfo(theCoin).then(function(coinData){
+      for (coin in updateList) {
+        theCoin = updateList[coin];
+        selectCoinInfo(theCoin.toLowerCase).then(function(coinData){
           //send the coin data
-          //postMessage("Current price of %s: %s", coinData.symbol, coinData.price);
+          console.log("Selecting...");
+          var updateMessage;
+          ((coinData && coinData.symbol) ? updateMessage = "The current price of " + coinData.symbol.toUpperCase() + ": " + coinData.price_usd + " (" + coinData.price_usd + ")" : updateMessage = "Uh oh! Something went wrong with retrieving the data.");
+          bot.sendMessage(tickerData, channel);
         });
       }
     } else {
-      //reply 'unable to find data'
+      //no data to send
+      bot.sendMessage("Uh oh! Looks like there's no data for me to send...", channel);
     }
   }
 
   function selectCoinInfo(coin) {
+    console.log(tickerData);
     return new Promise(function(resolve, reject){
       //check tickerData for that coin's symbol
       for (var index in tickerData) {
-        if (tickerData[index].symbol && tickerData[index].symbol !== "undefined" && typeof tickerData[index].symbol === 'string' && tickerData[index].symbol.toLowerCase() === coin){
+        if (tickerData[index].symbol && tickerData[index].symbol !== "undefined" && typeof tickerData[index].symbol === 'string' && tickerData[index].symbol.toLowerCase() === coin.toLowerCase){
           //if/when that coin's symbol is found, return all of that coin's information and stop searching
           resolve(tickerData[index]);
           break;
@@ -109,8 +115,9 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 
   //////////// AUTOMATIC INTERACTION ///////////////
   setInterval(function(){
-    update(interestList);
+    update(interestList, cryptocurrencyChannel);
   }, slackUpdateInterval * 1000);
+
   //////////// MANUAL INTERACTION ///////////////
   bot.on(RTM_EVENTS.MESSAGE, function(message){
     var text = message.text,
@@ -118,24 +125,34 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 
     var noUnderstand = "I'm sorry, I didn't understand that. Type *cryptobot help* to see a detail of my commands.";
 
-    if (text.includes(bot_name) || text.includes(bot_id)){
+    if (text && (text.includes(bot_name) || text.includes(bot_id))){
       //update(coins);
       if (text.includes("interest")) {
         if (text.includes("add")) {
+          saySuccessMessage();
+          //add the interest to interest list
+          //var coin = search the to see if the message includes a symbol or name from tickerData
+          //addInterest(coin, channel);
 
-        } else if (text.includes("remove") || (text.includes("delete")) {
+          //may need to make this a promise***
+        } else if (text.includes("remove") || text.includes("delete")) {
+          saySuccessMessage();
+          //remove the interest from interest list
+          //var coin = search the to see if the message includes a symbol or name from tickerData
+          //removeInterest(coin, channel);
 
+          //may need to make this a promise***
         } else if (text.includes("display") || text.includes("show")) {
-
+          //display the current interest list
+          displayInterest(channel);
         } else {
           bot.sendMessage(noUnderstand, channel);
         }
-      } else if (text.includes) {
-
-      } else if (text.includes) {
-
-      } else if (text.includes) {
-
+      } else if (text.includes("help")) {
+        //display the list of functions
+        displayHelp(channel);
+      } else if (text.includes("update")) {
+        update(interestList, channel);
       } else {
         bot.sendMessage(noUnderstand, channel);
       }
@@ -179,7 +196,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     }
 
     function displayHelp(channel) {
-      bot.sendMessage("You can ask me the following things:\n *display* interest list \n *add* (coin) to interest list \n *remove* (coin) from interest list" + , channel);
+      bot.sendMessage("You can ask me the following things:\n *display* interest list \n *add* (coin) to interest list \n *remove* (coin) from interest list", channel);
     }
   });
 });
