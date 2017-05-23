@@ -2,9 +2,10 @@
 
 //import our dependencies
 var RtmClient = require('@slack/client').RtmClient,
-    http = require('http'),
     CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS,
-    RTM_EVENTS = require('@slack/client').RTM_EVENTS;
+    RTM_EVENTS = require('@slack/client').RTM_EVENTS,
+    http = require('http'),
+    fs = require('fs');
 
 //declare some variables that help the bot function
 var server_url = process.env.SLACK_BOT_TOKEN || 'http://luminoco.slack.com',
@@ -58,7 +59,7 @@ function getTickerData() {
   });
 
   cmcGET.then(function(data){
-    if(data && data != 'undefined'){
+    if (data && data != 'undefined') {
       tickerData = data;
       tickerData = JSON.parse(tickerData);
       return data;
@@ -70,7 +71,7 @@ function getTickerData() {
 }
 
 function selectCoinInfo(coin) {
-  return new Promise(function(resolve, reject){
+  return new Promise(function(resolve, reject) {
     //check tickerData for that coin's symbol
     for (var ticker in tickerData) {
       if (tickerData[ticker].symbol && tickerData[ticker].symbol !== "undefined" && typeof tickerData[ticker].symbol === 'string' && tickerData[ticker].symbol.toLowerCase() === coin.toLowerCase()){
@@ -82,8 +83,8 @@ function selectCoinInfo(coin) {
   });
 }
 
-function getCoinList(){
-  return new Promise(function(resolve, reject){
+function getCoinList() {
+  return new Promise(function(resolve, reject) {
     ((!tickerData) ? reject("There is no data for me to work with!") : tickerData);
 
     var coinList = [];
@@ -116,7 +117,6 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
             target = updateList[coin];
 
         selectCoinInfo(target).then(function(coinInfo){
-          console.log(coinInfo);
           ((coinInfo && coinInfo.symbol) ? updateMessage = "The current price of " + coinInfo.symbol.toUpperCase() + " is " + coinInfo.price_btc + " BTC ($" + coinInfo.price_usd + ")" : updateMessage = "Uh oh! Something went wrong with retrieving the data.");
           bot.sendMessage(updateMessage, channel);
         }).catch(function(err){
@@ -169,19 +169,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       //CREATE
       if (text.includes("add")) {
         if (text.includes("interest")) {
-          //parse text for all coin references
-          parseCoins(text).then(function(parsedCoins){
-            for (var coin in parsedCoins) {
-              //add them to the list
-              interestList.push(parsedCoins[coin]);
-              if ((coin + 1) == parsedCoins.length) {
-                //update the user on the last cycle of the loop
-                saySuccessMessage("I added " + parsedCoins.join(", ") + " to the interest list.");
-              }
-            }
-          }).catch(function(err){
-            bot.sendMessage(err, channel);
-          });
+          addInterest(text, channel);
         } else {
           bot.sendMessage(noUnderstand, channel);
         }
@@ -209,9 +197,11 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       } else if (text.includes("update") || text.includes("set")) {
         if (text.includes("interval")) {
           var filterInt = function(value) {
-            if (/\d+/.test(value))
+            if (/\d+/.test(value)) {
               return Number(value);
-            return NaN;
+            } else {
+              return NaN;
+            }
           }
 
           setUpdateInterval(filterInt(text));
@@ -224,14 +214,8 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
         }
       //DELETE
       } else if (text.includes("remove") || text.includes("delete")) {
-        if (text.includes("coin") || text.includes("crypto")) {
-          //parse text for all coin references
-          //make sure it's actually on the list
-          //remove it from the list
-
-          //parsedCoins = [];
-          //index = interestList.indexOf(parsedCoins);
-          notValidYet(channel);
+        if (text.includes("interest")) {
+          removeInterest(text, channel);
         }
       //HELP
       } else if (text.includes("help")) {
@@ -247,14 +231,13 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
         getCoinList().then(function(coinList){
           var words = message.split(" "),
               coinsMentioned = [];
-          //console.log(coinList);
           for (var word in words) {
-            if (coinList.indexOf(words[word].toUpperCase) > -1) {
-              coinsMentioned.push(words[word]);
-              if ((word + 1) == words.length) {
-                console.log(coinsMentioned);
-                resolve(coinsMentioned);
-              }
+            var useable = words[word].toUpperCase();
+            if (coinList.indexOf(useable) > -1) {
+              coinsMentioned.push(useable);
+            }
+            if ((parseInt(word) + 1) == words.length) {
+              resolve(coinsMentioned);
             }
           }
         }).catch(function(err){
@@ -272,18 +255,40 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     }
 
     function addInterest(string, channel) {
-      string = string.toUpperCase();
-      if (! interestList.includes(string)) {
-        interestList.push(string);
-      }
+      //parse text for all coin references
+      parseCoins(string).then(function(parsedCoins){
+        for (var coin in parsedCoins) {
+          //add the parsed coins to the list (if it's not already there)
+          ((interestList.indexOf(parsedCoins[coin]) > -1) ? bot.sendMessage(parsedCoins[coin] + " is already on the interest list.", channel) : interestList.push(parsedCoins[coin]));
+          if ((parseInt(coin) + 1) == parsedCoins.length) {
+            //update the user on the last cycle of the loop
+            saySuccessMessage(channel, "I made sure that " + parsedCoins.join(", ") + " are the interest list.");
+            //... and save the new interest list as 'interestlist.json'
+            fs.writeFile('./interestlist.json', JSON.stringify(interestList), function(){});
+          }
+        }
+      }).catch(function(err){
+        bot.sendMessage(err, channel);
+      });
     }
 
     function removeInterest(string, channel) {
-      string = string.toUpperCase();
-      if (interestList.includes(string)) {
-        var index = array.indexOf(string);
-        ((index > -1) ? interestList.splice(index, 1) : index);
-      }
+      //parse text for all coin references
+      parseCoins(string).then(function(parsedCoins){
+        for (var coin in parsedCoins) {
+          //remove the parsed coins from the list
+          var index = interestList.indexOf(parsedCoins[coin]);
+          ((interestList.indexOf(parsedCoins[coin]) > -1) ? interestList.split(index, 1) : bot.sendMessage("Hmm, I don't see " + parsedCoins[coin] + " on the list.", channel));
+          if ((parseInt(coin) + 1) == parsedCoins.length) {
+            //update the user on the last cycle of the loop
+            saySuccessMessage(channel, "I can assure you that " + parsedCoins.join(", ") + " are not on the interest list.");
+            //... and save the new interest list as 'interestlist.json'
+            fs.writeFile('./interestlist.json', JSON.stringify(interestList), function(){});
+          }
+        }
+      }).catch(function(err){
+        bot.sendMessage(err, channel);
+      });
     }
 
     function displayInterest(channel) {
