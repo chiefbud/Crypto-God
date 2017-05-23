@@ -218,8 +218,8 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
         if (text.includes("interval")) {
           var filterInt = function(value) {
             if (/\d+/.test(value)) {
-              console.log(Number(value));
-              return Number(value);
+              var num = value.match(/\d+/);
+              return parseInt(num[0]);
             } else {
               return NaN;
             }
