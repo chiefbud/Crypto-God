@@ -122,7 +122,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
             target = updateList[coin];
 
         selectCoinInfo(target).then(function(coinInfo){
-          ((coinInfo && coinInfo.symbol) ? updateMessage = "The current price of " + coinInfo.symbol.toUpperCase() + " is " + coinInfo.price_btc + " BTC ($" + coinInfo.price_usd + ") - *" + coinInfo.percent_change_24h + "%* in 24 hours (" + coinInfo.percent_change_1h + "% last hour)." : updateMessage = "Uh oh! Something went wrong with retrieving the data.");
+          ((coinInfo && coinInfo.symbol) ? updateMessage = "*" + coinInfo.symbol.toUpperCase() + "*: " + coinInfo.price_btc + " BTC ($" + coinInfo.price_usd + ") | *" + coinInfo.percent_change_24h + "%* in 24 hours (" + coinInfo.percent_change_1h + "% last hour)." : updateMessage = "Uh oh! Something went wrong with retrieving the data.");
           bot.sendMessage(updateMessage, channel);
         }).catch(function(err){
           ((channel) ? bot.sendMessage(err, channel) : console.log(err));
