@@ -1,0 +1,15 @@
+{
+  "bot": {
+    "id": "",
+    "name": ""
+  },
+  "updates": {
+    "enabled": false,
+    "interval": 21600,
+    "channel": ""
+  },
+  "alerts": {
+    "enabled": false,
+    "threshold": 10
+  }
+}
