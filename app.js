@@ -183,7 +183,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       bot.sendMessage("That functionality hasn't been added yet, but I understand what you're saying. Let's remember to walk before we run, dude. Bleep bloop.", channel);
     }
 
-    if (text && (text.includes("!" + bot_name) || text.includes(bot_id)) && author !== bot_name) {
+    if (text && (text.includes("!" + bot_name) || text.includes(bot_id)) && (author !== bot_name || author !== 'slackbot')) {
       //CREATE
       if (text.includes("add")) {
         if (text.includes("interest")) {
@@ -221,7 +221,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       //UPDATE
       } else if (text.includes("update") || text.includes("set")) {
         if (text.includes("interval")) {
-          parseIntComplex(text).then(function(int){
+          parseFloatComplex(text).then(function(int){
             setUpdateInterval(int).then(function(resolved){
               saySuccessMessage(channel, "You'll be automagically updated on your coins interests every " + int + " hours from now on.");
             }).catch(function(err){
@@ -271,12 +271,13 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       });
     }
 
-    function parseIntComplex(message) {
+    function parseFloatComplex(message) {
       return new Promise(function(resolve, reject){
         if (/\d+/.test(message)) {
           minusBotReference(message).then(function(clean){
-            var num = clean.match(/\d+/);
-            resolve(parseInt(num[0]));
+            var num;
+            ((/.\d+/.test(clean)) ? num = clean.match(/.\d+/) : num = clean.match(/\d+/)); //check for decimals representing hours, too
+            resolve(parseFloat(num[0]));
           }).catch(function(err){
             reject(err);
           });
@@ -356,9 +357,8 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 
     function setUpdateChannel(channel){
       updateChannel = channel;
-      saySuccessMessage(channel);
+      saySuccessMessage(channel, "I set the update channel to " + channel + ". That's where you'll get updated automatically from now on.");
     }
-
 
     function displayHelp(channel) {
       bot.sendMessage("You can ask me the following things:\n *add* (coin) to interest list \n *display/show* interest list, update interval, update channel, (coin) price \n *update/set* (time) update interval, (channel) update channel \n *remove/delete* (coin) from interest list \n *help* show this information panel", channel);
