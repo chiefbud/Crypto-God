@@ -148,6 +148,11 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     return new Promise(function(resolve, reject){
       if (typeof interval === 'number') {
         slackUpdateInterval = interval * 60 * 60;
+        clearInterval(automaticUpdates);
+        automaticUpdates = null;
+        automaticUpdates = setInterval(function(){
+          ((interestList && updateChannel) ? update(interestList, updateChannel) : interestList);
+        }, slackUpdateInterval * 1000);
         resolve(true);
       } else {
         reject("Sorry, I didn't see a number.");
@@ -216,24 +221,16 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       //UPDATE
       } else if (text.includes("update") || text.includes("set")) {
         if (text.includes("interval")) {
-          var filterInt = function(value) {
-            if (/\d+/.test(value)) {
-              var num = value.match(/\d+/);
-              return parseInt(num[0]);
-            } else {
-              return NaN;
-            }
-          }
-
-          if (! filterInt.isNaN) {
-            setUpdateInterval(filterInt(text)).then(function(resolved){
-              saySuccessMessage(channel, "You'll be automagically updated on your coins interests every " + filterInt(text) + " hours from now on.");
+          parseIntComplex(text).then(function(int){
+            setUpdateInterval(int).then(function(resolved){
+              saySuccessMessage(channel, "You'll be automagically updated on your coins interests every " + int + " hours from now on.");
             }).catch(function(err){
-              bot.sendMessage("Sorry, I didn't see a number in your command. Please say something like 'set the update interval to 6 hours'.", channel);
+              bot.sendMessage(err, channel);
             });
-          } else {
-            bot.sendMessage("Sorry, I didn't see a number in your command. Please say something like 'set the update interval to 6 hours'.", channel);
-          }
+          }).catch(function(err){
+            bot.sendMessage(err, channel);
+          });
+
         } else if (text.includes("channel")) {
           setUpdateChannel(channel);
           bot.sendMessage("This channel will be the channel that gets automatic interest updates every " + slackUpdateInterval + " hours.", channel);
@@ -271,6 +268,35 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
         }).catch(function(err){
           reject(err);
         });
+      });
+    }
+
+    function parseIntComplex(message) {
+      return new Promise(function(resolve, reject){
+        if (/\d+/.test(message)) {
+          minusBotReference(message).then(function(clean){
+            var num = clean.match(/\d+/);
+            resolve(parseInt(num[0]));
+          }).catch(function(err){
+            reject(err);
+          });
+        } else {
+          reject("It looks like I was not supplied with a real number.");
+        }
+      });
+    }
+
+    function minusBotReference(text){
+      return new Promise(function(resolve, reject){
+        if (text && typeof text === 'string' && text !== "") {
+          var re_id = new RegExp(bot_id.toString(), "g"),
+              re_name = new RegExp(bot_name.toString(), "g");
+          text = text.replace(re_id, "");
+          text = text.replace(re_name, "");
+          resolve(text);
+        } else {
+          reject("Hmm... there seems to be no readable text here. Strange.");
+        }
       });
     }
 
