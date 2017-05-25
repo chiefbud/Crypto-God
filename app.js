@@ -494,7 +494,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     }
 
     function displayHelp(channel) {
-      bot.sendMessage("You can ask me the following things:\n *add* (coin) to interest list \n *display/show* interest list, update interval, update channel, (coin) price \n *update/set* (time) update interval, (channel) update channel, (percent) alert threshold \n *remove/delete* (coin) from interest list \n *enable* automatic updates, price alerts \n *help* show this information panel", channel);
+      bot.sendMessage("You can ask me the following things:\n *enable* or *disable* updates, alerts\n *add* (coin) to interest list\n *display/show/what/is/are* interest list, updates enabled, update interval, update channel, alerts enabled, alert threshold, alert channel, (coin) price, interest list prices\n *update/set* (hours) update interval, update channel, (percent) alert threshold, alert channel\n *remove/delete* (coin) from interest list\n *enable* automatic updates, price alerts\n *help* show this information panel", channel);
     }
   });
 });
