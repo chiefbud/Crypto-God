@@ -279,7 +279,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 
     if (text && (text.includes("!" + bot_name) || text.includes(bot_id)) && (author !== bot_name || author !== 'slackbot')) {
       //ENABLE/DISABLE
-      if (text.includes("enable") || text.includes("disable")) {
+      if ((text.includes("enable") || text.includes("disable")) && ! (text.includes("are") || text.includes("is"))) {
         if (text.includes("up")) {
           ((text.includes("enable")) ? enableAutomaticUpdates(true) : enableAutomaticUpdates(false));
           saySuccessMessage(channel);
@@ -295,7 +295,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
           bot.sendMessage(noUnderstand, channel);
         }
       //READ
-      } else if (text.includes("display") || text.includes("show") || text.includes("what")) {
+    } else if (text.includes("display") || text.includes("show") || text.includes("list") || text.includes("what") || text.includes("is") || text.includes("are")) {
         if (text.includes("price") || text.includes("prices")) {
           if (text.includes("interest")) {
             ((interestList.length > 0) ? update(interestList, channel) : bot.sendMessage("It looks like your interest list is currently empty! *Add* to it by typing '@cryptobot add BTC to the interest list.'", channel));
@@ -310,10 +310,22 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
         } else if (text.includes("interest")) {
           ((interestList.length > 0) ? displayInterests(channel) : bot.sendMessage("It looks like your interest list is currently empty! *Add* to it by typing '@cryptobot add BTC to the interest list.'", channel));
         } else if (text.includes("update")) {
-          if (text.includes("interval")) {
+          if (text.includes("interval") || text.includes("period")) {
             bot.sendMessage("The current automatic update interval is set to " + (slackUpdateInterval / 60 / 60) + " hours.", channel);
           } else if (text.includes("channel")) {
-            bot.sendMessage("The current channel receiving the automatic updates is " + updateChannel + ".", channel);
+            bot.sendMessage("The current channel receiving the automatic updates and rapid price increase alerts is " + slackUpdateChannel + ".", channel);
+          } else if (text.includes("enabled")) {
+            ((automaticUpdatesEnabled) ? bot.sendMessage("Automatic updates are indeed enabled! You'll be updated every " + (slackUpdateInterval / 60 / 60) + " hours.", channel) : bot.sendMessage("It seems as though automatic updates are disabled.", channel));
+          } else {
+            bot.sendMessage(noUnderstand, channel);
+          }
+        } else if (text.includes("alerts")) {
+          if (text.includes("threshold") || text.includes("amount")) {
+            bot.sendMessage("The current pump and dump threshold is set to " + slackAlertThreshold + "% in one hour.", channel);
+          } else if (text.includes("channel")) {
+            bot.sendMessage("The current channel receiving the rapid price increase alerts and automatic updates is " + slackUpdateChannel + ".", channel);
+          } else if (text.includes("enabled")) {
+            ((alertsEnabled) ? bot.sendMessage("Pump and dump alerts are indeed enabled! You'll be updated when a coin reaches " + slackAlertThreshold + "% increase/decrease in over one hour.", channel) : bot.sendMessage("It seems as though automatic updates are disabled.", channel));
           } else {
             bot.sendMessage(noUnderstand, channel);
           }
@@ -380,7 +392,6 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     function parseCoins(message) {
       return new Promise(function(resolve, reject){
         getCoinList().then(function(coinList){
-          console.log(coinList);
           var words = message.split(" "),
               coinsMentioned = [];
           for (var word in words) {
@@ -444,7 +455,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
           ((interestList.indexOf(parsedCoins[coin]) > -1) ? bot.sendMessage(parsedCoins[coin] + " is already on the interest list.", channel) : interestList.push(parsedCoins[coin]));
           if ((parseInt(coin) + 1) == parsedCoins.length) {
             //update the user on the last cycle of the loop
-            saySuccessMessage(channel, "I made sure that " + parsedCoins.join(", ") + " are the interest list.");
+            saySuccessMessage(channel, "I made sure that the coins you mentioned are now the interest list. You can type '@cryptobot show me the interest list' to confirm.");
             //... and save the new interest list as 'interestlist.json'
             saveInterestList();
           }
@@ -463,7 +474,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
           ((interestList.indexOf(parsedCoins[coin]) > -1) ? interestList.splice(index, 1) : bot.sendMessage("Hmm, I don't see " + parsedCoins[coin] + " on the list.", channel));
           if ((parseInt(coin) + 1) == parsedCoins.length) {
             //update the user on the last cycle of the loop
-            saySuccessMessage(channel, "I can assure you that the coins you mentioned are not on the interest list anymore.");
+            saySuccessMessage(channel, "I can assure you that the coins you mentioned are not on the interest list anymore. You can type '@cryptobot show me the interest list' to confirm.");
             //... and save the new interest list as 'interestlist.json'
             saveInterestList();
           }
