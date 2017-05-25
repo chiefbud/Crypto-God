@@ -8,7 +8,7 @@ var RtmClient = require('@slack/client').RtmClient,
     fs = require('fs');
 
 //declare some variables that help the bot function
-var server_url = process.env.SLACK_BOT_TOKEN || 'http://luminoco.slack.com',
+var server_url = process.env.SERVER_URL || 'http://luminoco.slack.com',
     bot_token = process.env.SLACK_BOT_TOKEN || 'xoxb-186234090695-RoK5KbvTNqnWYXpEsFwqTos5',
     bot_name,
     bot_id;
@@ -96,7 +96,7 @@ function getCoinList() {
     var coinList = [];
     for (var ticker in tickerData) {
       coinList.push(tickerData[ticker].symbol);
-      if ((ticker+1) == tickerData.length) {
+      if ((parseInt(ticker) + 1) == tickerData.length) {
         resolve(coinList);
       }
     }
@@ -134,6 +134,25 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     }
   }
 
+  function alert(alertList, channel) {
+    if (tickerData.length !== 0 && updateList.length !== 0) {
+      for (var coin in alertList) {
+        var alertMessage,
+            target = alertList[coin];
+
+        selectCoinInfo(target).then(function(coinInfo){
+          ((coinInfo && coinInfo.symbol) ? alertMessage = "*ALERT*: It looks like " + coinInfo.symbol.toUpperCase() + " is making a large shift in price (" + coinInfo.percent_change_1h + "% last hour)." : updateMessage = "Uh oh! Something went wrong with retrieving the data.");
+          bot.sendMessage(alertMessage, channel);
+        }).catch(function(err){
+          ((channel) ? bot.sendMessage(err, channel) : console.log(err));
+        });
+      }
+    } else {
+      //no data to send
+      bot.sendMessage("Uh oh! Looks like there's no data for me to send you... coinmarketcap.com might be down or I might be disconnected from their server.", channel);
+    }
+  }
+
   //////////// AUTOMATIC INTERACTION ///////////////
 
   //This commented function call is not functioning yet as each user has a specific channel ID and you can't simply send messages to a user.id
@@ -151,10 +170,11 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       slackUpdateChannel = botConfig.updates.channel,
       alertsEnabled = botConfig.alerts.enabled,
       slackAlertThreshold = botConfig.alerts.threshold,
-      automaticUpdates;
+      automaticUpdates,
+      automaticAlerts;
 
-  function enableAutomaticUpdates(){
-    ((!automaticUpdatesEnabled) ? automaticUpdatesEnabled = true : automaticUpdatesEnabled = false);
+  function enableAutomaticUpdates(bool){
+    ((bool) ? automaticUpdatesEnabled = true : automaticUpdatesEnabled = false);
     saveConfig();
   }
 
@@ -181,8 +201,8 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     saveConfig();
   }
 
-  function enableAlerts(){
-    ((!alertsEnabled) ? alertsEnabled = true : alertsEnabled = false);
+  function enableAlerts(bool){
+    ((bool) ? alertsEnabled = true : alertsEnabled = false);
     saveConfig();
   }
 
@@ -199,6 +219,32 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     });
   }
 
+  /*
+  function setAutomaticAlerts() {
+    if (alertsEnabled === true && slackUpdateChannel && typeof slackUpdateChannel === 'string' && slackUpdateChannel != "") {
+      clearInterval(automaticAlerts);
+      automaticAlerts = null;
+      automaticAlerts = setInterval(function(){
+        //loop through each coin and see if percent_change_1h is greater than or equal to slackAlertThreshold
+        //also make sure that the 24h_volume_usd is above a significant amount
+        var negativeAlertThreshold = -Math.abs(slackAlertThreshold);
+        for (var ticker in tickerData) {
+          var percent_change = parseFloat(tickerData[ticker].percent_change_1h),
+              volume = parseFloat(tickerData[ticker].percent_change_1h),
+              symbol = tickerData[ticker].symbol.toUpperCase();
+              alertList = [];
+          if ((percent_change > slackAlertThreshold || percent_change < negativeAlertThreshold) && volume > 100000){
+            alertList.push(tickerData[ticker]);
+          }
+          if (ticker == tickerData.length && ! alertList.isEmpty()) {
+            alert(alertList, slackUpdateChannel);
+          }
+        }
+      }, 5 * 1000);
+    }
+  }
+  */
+
   function saveConfig(){
     var config_object = {
       bot: {
@@ -212,7 +258,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       },
       alerts: {
         enabled: alertsEnabled,
-        threshold: slackAlertThreshold
+        threshold: slackAlertThreshold,
       }
     };
 
@@ -232,8 +278,17 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     var noUnderstand = "I'm sorry, I didn't understand what you asked. Type *cryptobot help* to see a detail of my commands.";
 
     if (text && (text.includes("!" + bot_name) || text.includes(bot_id)) && (author !== bot_name || author !== 'slackbot')) {
+      //ENABLE/DISABLE
+      if (text.includes("enable") || text.includes("disable")) {
+        if (text.includes("up")) {
+          ((text.includes("enable")) ? enableAutomaticUpdates(true) : enableAutomaticUpdates(false));
+          saySuccessMessage(channel);
+        } else if (text.includes("alerts")) {
+          ((text.includes("enable")) ? enableAlerts(true) : enableAlerts(false));
+          saySuccessMessage(channel);
+        }
       //CREATE
-      if (text.includes("add")) {
+      } else if (text.includes("add")) {
         if (text.includes("interest")) {
           addInterest(text, channel);
         } else {
@@ -267,37 +322,44 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
         }
       //UPDATE
       } else if (text.includes("update") || text.includes("set")) {
-        if (text.includes("interval")) {
-          if (!automaticUpdatesEnabled) {
-            bot.sendMessage("Uh oh! It looks like automatic updates are disabled. To enable them, type '@cryptobot enable automatic updates.'", channel);
-          } else {
+        if (text.includes("alert")) {
+          if (alertsEnabled === false) {
+            bot.sendMessage("Uh oh! It looks like pump/dump alerts are disabled. To enable them, type '@cryptobot enable alerts'.", channel);
+          } else if (text.includes("channel") || text.includes("location"))  {
+            setUpdateChannel(channel);
+            saySuccessMessage(channel, "I set the update and alerts channel to " + channel + ". That's where you'll get updated automatically from now on.");
+          } else if (text.includes("threshold"))  {
             parseFloatComplex(text).then(function(num){
-              setUpdateInterval(num).then(function(resolved){
-                saySuccessMessage(channel, "You'll be automagically updated on your coins interests every " + int + " hours from now on.");
+              setAlertThreshold(num).then(function(resolved){
+                saySuccessMessage(channel, "You'll be automagically updated on coins that reach " + num + "% increase/decrease in one hour from now on.");
               }).catch(function(err){
                 bot.sendMessage(err, channel);
               });
             }).catch(function(err){
               bot.sendMessage(err, channel);
             });
-          }
-        } else if (text.includes("channel")) {
-          if (!automaticUpdatesEnabled) {
-            bot.sendMessage("Uh oh! It looks like automatic updates are disabled. To enable them, type '@cryptobot enable automatic updates.'", channel);
           } else {
+            bot.sendMessage(noUnderstand, channel);
+          }
+        } else if (text.includes("update")) {
+          if (automaticUpdatesEnabled === false) {
+            bot.sendMessage("Uh oh! It looks like automatic updates on your favorite coins are disabled. To enable them, type '@cryptobot enable updates'.", channel);
+          } else if (text.includes("channel") || text.includes("location"))  {
             setUpdateChannel(channel);
             saySuccessMessage(channel, "I set the update channel to " + channel + ". That's where you'll get updated automatically from now on.");
-          }
-        } else if (text.includes("threshold")) {
-          parseFloatComplex(text).then(function(num){
-            setAlertThreshold(num).then(function(resolved){
-              saySuccessMessage(channel, "You'll be automagically updated on coins that reach " + num + "% increase in one hour from now on.");
+          } else if (text.includes("interval"))  {
+            parseFloatComplex(text).then(function(num){
+              setUpdateInterval(num).then(function(resolved){
+                saySuccessMessage(channel, "You'll be automagically updated on your coins interests every " + num + " hours from now on.");
+              }).catch(function(err){
+                bot.sendMessage(err, channel);
+              });
             }).catch(function(err){
               bot.sendMessage(err, channel);
             });
-          }).catch(function(err){
-            bot.sendMessage(err, channel);
-          });
+          } else {
+            bot.sendMessage(noUnderstand, channel);
+          }
         } else {
           bot.sendMessage(noUnderstand, channel);
         }
@@ -305,17 +367,6 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       } else if (text.includes("remove") || text.includes("delete")) {
         if (text.includes("interest")) {
           removeInterest(text, channel);
-        }
-      //ENABLE
-      } else if (text.includes("enable") || text.includes("disable")) {
-        if (text.includes("update")) {
-          enableAutomaticUpdates();
-          saySuccessMessage(channel);
-        } else if (text.includes("alerts")) {
-          enableAlerts();
-          saySuccessMessage(channel);
-        } else {
-          bot.sendMessage(noUnderstand, channel);
         }
       //HELP
       } else if (text.includes("help")) {
@@ -329,6 +380,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     function parseCoins(message) {
       return new Promise(function(resolve, reject){
         getCoinList().then(function(coinList){
+          console.log(coinList);
           var words = message.split(" "),
               coinsMentioned = [];
           for (var word in words) {
