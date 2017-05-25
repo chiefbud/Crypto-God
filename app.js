@@ -295,7 +295,7 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
           bot.sendMessage(noUnderstand, channel);
         }
       //READ
-    } else if (text.includes("display") || text.includes("show") || text.includes("list") || text.includes("what") || text.includes("is") || text.includes("are")) {
+    } else if (text.includes("display") || text.includes("show") || text.includes("what") || text.includes("is") || text.includes("are")) {
         if (text.includes("price") || text.includes("prices")) {
           if (text.includes("interest")) {
             ((interestList.length > 0) ? update(interestList, channel) : bot.sendMessage("It looks like your interest list is currently empty! *Add* to it by typing '@cryptobot add BTC to the interest list.'", channel));
