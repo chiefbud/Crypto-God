@@ -17,7 +17,7 @@ var server_url = process.env.SERVER_URL || 'http://luminoco.slack.com',
 var dir = __dirname,
     config = dir + '/config.json',
     interest_list = dir + '/interestlist.json',
-    success_messages = dir + '/successmessages.json';
+    sayings = dir + '/sayings.json';
 
 //make a new bot object
 var bot = new RtmClient(bot_token);
@@ -384,6 +384,8 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       } else if (text.includes("help")) {
         //display the list of functions
         displayHelp(channel);
+      } else if (text.includes("hello") || text.includes("greetings") || text.includes("yo")){
+        bot.sendMessage("");
       } else {
         bot.sendMessage(noUnderstand, channel);
       }
@@ -439,12 +441,28 @@ bot.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
       });
     }
 
+    function sayGreeting(channel, addition) {
+      var greetingList = sayings.greeting,
+          rand = Math.floor((Math.random() * greetingList.length)),
+          greeting = greetingList[rand];
+      ((addition) ? greeting = greeting + " " + addition : greeting);
+      bot.sendMessage(greeting, channel);
+    }
+
     function saySuccessMessage(channel, addition) {
-      var successMessageList = require(success_messages),
+      var successMessageList = sayings.success,
           rand = Math.floor((Math.random() * successMessageList.length)),
           successMessage = successMessageList[rand];
       ((addition) ? successMessage = successMessage + " " + addition : successMessage);
       bot.sendMessage(successMessage, channel);
+    }
+
+    function sayErrorMessage(channel, addition) {
+      var errorMessageList = sayings.error,
+          rand = Math.floor((Math.random() * successMessageList.length)),
+          errorMessage = errorMessageList[rand];
+      ((addition) ? errorMessage = errorMessage + " " + addition : errorMessage);
+      bot.sendMessage(errorMessage, channel);
     }
 
     function addInterest(string, channel) {
