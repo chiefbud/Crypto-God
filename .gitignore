@@ -4,3 +4,4 @@ successmessages.json
 .ds_store
 ._*
 .smb*
+npm-debug.log

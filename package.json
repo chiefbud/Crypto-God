@@ -9,8 +9,8 @@
   "author": "Michael Warner",
   "license": "ISC",
   "dependencies": {
-    "@slack/client": "^3.9.0",
     "body-parser": "^1.17.2",
+    "discord.js": "^11.1.0",
     "express": "^4.15.3",
     "request": "^2.81.0"
   }
