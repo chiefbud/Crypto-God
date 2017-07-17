@@ -236,13 +236,13 @@ bot.on('ready', () => {
 
   //////////// MANUAL INTERACTION ///////////////
   bot.on('message', function(payload){
-    var noUnderstand = "I'm sorry, I didn't understand what you asked. Type *cryptobot help* to see a detail of my commands.";
+    var noUnderstand = "I'm sorry, I didn't understand what you asked. Type *!cryptobot help* to see a detail of my commands.";
 
     var message = payload.content,
         author = payload.author,
         channel = payload.channel;
 
-    if (message && (message.includes(bot_name.toLowerCase()) || message.includes(bot_id))) {
+    if (message && message.includes("!" + bot_name.toLowerCase()) && author !== bot_name) {
       //ENABLE/DISABLE
       if ((message.includes("enable") || message.includes("disable")) && ! (message.includes("are") || message.includes("is"))) {
         if (message.includes("up")) {
@@ -263,7 +263,7 @@ bot.on('ready', () => {
     } else if (message.includes("display") || message.includes("show") || message.includes("what") || message.includes("is") || message.includes("are")) {
         if (message.includes("price") || message.includes("prices")) {
           if (message.includes("interest")) {
-            ((interestList.length > 0) ? update(interestList, channel) : payload.reply("It looks like your interest list is currently empty! *Add* to it by typing '@cryptobot add BTC to the interest list.'"));
+            ((interestList.length > 0) ? update(interestList, channel) : payload.reply("It looks like your interest list is currently empty! *Add* to it by typing '!cryptobot add BTC to the interest list.'"));
           } else {
             //parse text for all coin references
             parseCoins(message).then(function(parsedCoins){
@@ -273,7 +273,7 @@ bot.on('ready', () => {
             });
           }
         } else if (message.includes("interest")) {
-          ((interestList.length > 0) ? payload.reply(displayInterests(channel)) : payload.reply("It looks like your interest list is currently empty! *Add* to it by typing '@cryptobot add BTC to the interest list.'"));
+          ((interestList.length > 0) ? payload.reply(displayInterests(channel)) : payload.reply("It looks like your interest list is currently empty! *Add* to it by typing '!cryptobot add BTC to the interest list.'"));
         } else if (message.includes("update")) {
           if (message.includes("interval") || message.includes("period")) {
             payload.reply("The current automatic update interval is set to " + (updateInterval / 60 / 60) + " hours." );
@@ -301,7 +301,7 @@ bot.on('ready', () => {
       } else if (message.includes("update") || message.includes("set")) {
         if (message.includes("alert")) {
           if (alertsEnabled === false) {
-            payload.reply("Uh oh! It looks like pump/dump alerts are disabled. To enable them, type '@cryptobot enable alerts'." );
+            payload.reply("Uh oh! It looks like pump/dump alerts are disabled. To enable them, type '!cryptobot enable alerts'." );
           } else if (message.includes("channel") || message.includes("location"))  {
             setUpdateChannel(channel);
             saySuccessMessage(channel, "I set the update and alerts channel to " + channel + ". That's where you'll get updated automatically from now on.");
@@ -320,7 +320,7 @@ bot.on('ready', () => {
           }
         } else if (message.includes("update")) {
           if (automaticUpdatesEnabled === false) {
-            payload.reply("Uh oh! It looks like automatic updates on your favorite coins are disabled. To enable them, type '@cryptobot enable updates'." );
+            payload.reply("Uh oh! It looks like automatic updates on your favorite coins are disabled. To enable them, type '!cryptobot enable updates'." );
           } else if (message.includes("channel") || message.includes("location"))  {
             setUpdateChannel(channel);
             saySuccessMessage(channel, "I set the update channel to " + channel + ". That's where you'll get updated automatically from now on.");
@@ -439,7 +439,7 @@ bot.on('ready', () => {
           ((interestList.indexOf(parsedCoins[coin]) > -1) ? payload.reply(parsedCoins[coin] + " is already on the interest list." ) : interestList.push(parsedCoins[coin]));
           if ((parseInt(coin) + 1) == parsedCoins.length) {
             //update the user on the last cycle of the loop
-            channel.send(saySuccessMessage("I made sure that the coins you mentioned are now the interest list. You can type '@cryptobot show me the interest list' to confirm."));
+            channel.send(saySuccessMessage("I made sure that the coins you mentioned are now the interest list. You can type '!cryptobot show me the interest list' to confirm."));
             //... and save the new interest list as 'interestlist.json'
             saveInterestList();
           }
@@ -458,7 +458,7 @@ bot.on('ready', () => {
           ((interestList.indexOf(parsedCoins[coin]) > -1) ? interestList.splice(index, 1) : payload.reply("Hmm, I don't see " + parsedCoins[coin] + " on the list." ));
           if ((parseInt(coin) + 1) == parsedCoins.length) {
             //update the user on the last cycle of the loop
-            channel.send(saySuccessMessage("I can assure you that the coins you mentioned are not on the interest list anymore. You can type '@cryptobot show me the interest list' to confirm."));
+            channel.send(saySuccessMessage("I can assure you that the coins you mentioned are not on the interest list anymore. You can type '!cryptobot show me the interest list' to confirm."));
             //... and save the new interest list as 'interestlist.json'
             saveInterestList();
           }
@@ -473,7 +473,7 @@ bot.on('ready', () => {
         var concatInterests = interestList.join(", ");
         return "The current interest list includes: " + concatInterests + ".";
       } else {
-        return "It looks like the interest list is empty! *Add* to it by typing '@cryptobot add BTC to the interest list'.";
+        return "It looks like the interest list is empty! *Add* to it by typing '!cryptobot add BTC to the interest list'.";
       }
     }
 
