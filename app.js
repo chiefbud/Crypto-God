@@ -146,13 +146,12 @@ bot.on('ready', () => {
 
   //////////// AUTOMATIC INTERACTION ///////////////
 
-  //This commented function call is not functioning yet as each user has a specific channel ID and you can't simply send messages to a user.id
-  /*
+ 
   bot.on(RTM_EVENTS.TEAM_JOIN, function(user){
-    bot.sendMessage("Welcome to the team! My name is " + bot_name + " and I'm here to keep you updated on cryptocurrency prices. Allow me to send you a list of my commands.", user.id);
+    user.send("Welcome to the team! My name is " + bot_name + " and I'm here to keep you updated on cryptocurrency prices. Allow me to send you a list of my commands.", user.id);
     displayHelp(user.id);
   });
-  */
+  
 
   var botConfig = require(config);
 
